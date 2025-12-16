@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import PostForm from "@/components/admin/PostForm";
 import PostList from "@/components/admin/PostList";
@@ -6,6 +7,8 @@ import Toast from "@/components/admin/Toast";
 import DeleteModal from "@/components/admin/DeleteModel";
 
 export default function AdminPage() {
+  const [mounted, setMounted] = useState(false);
+
   const [posts, setPosts] = useState([]);
   const [form, setForm] = useState({ title: "", summary: "", content: "" });
   const [saving, setSaving] = useState(false);
@@ -13,9 +16,18 @@ export default function AdminPage() {
   const [toast, setToast] = useState(null);
   const [deleteSlug, setDeleteSlug] = useState(null);
 
+  // 1️⃣ mount flag
   useEffect(() => {
-    fetch("/api/posts").then(r => r.json()).then(setPosts);
+    setMounted(true);
   }, []);
+
+  // 2️⃣ data fetch (runs only after mount anyway)
+  useEffect(() => {
+    if (!mounted) return;
+    fetch("/api/posts")
+      .then(r => r.json())
+      .then(setPosts);
+  }, [mounted]);
 
   function resetForm() {
     setForm({ title: "", summary: "", content: "" });
@@ -48,6 +60,9 @@ export default function AdminPage() {
     setTimeout(() => setToast(null), 3000);
     resetForm();
   }
+
+  // ✅ EARLY RETURN ONLY AFTER ALL HOOKS
+  if (!mounted) return null;
 
   return (
     <div className="max-w-5xl mx-auto space-y-16">
