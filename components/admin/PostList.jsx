@@ -18,14 +18,17 @@ export default function PostList({ posts, onEdit, onDelete }) {
             <div className="grid gap-6">
                 {posts.map(p => (
                     <div
-                        key={p.id}
+                        key={p.slug}
                         className="glass rounded-2xl p-6 flex justify-between"
                     >
                         <div>
                             <div className="text-lg text-slate-100">{p.title}</div>
                             <div className="text-xs text-slate-400">
-                                {new Date(p.createdAt).toISOString().split("T")[0]}
+                                {p.createdAt && !isNaN(Date.parse(p.createdAt))
+                                    ? new Date(p.createdAt).toISOString().split("T")[0]
+                                    : "—"}
                             </div>
+
                         </div>
 
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-sm">

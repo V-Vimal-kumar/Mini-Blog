@@ -16,27 +16,40 @@ export default function AdminPage() {
   const [toast, setToast] = useState(null);
   const [deleteSlug, setDeleteSlug] = useState(null);
 
-  // 1️⃣ mount flag
+  /* ---------- mount ---------- */
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 2️⃣ data fetch (runs only after mount anyway)
+  /* ---------- fetch posts ---------- */
   useEffect(() => {
     if (!mounted) return;
+
     fetch("/api/posts")
       .then(r => r.json())
-      .then(setPosts);
+      .then(setPosts)
+      .catch(() =>
+        setToast({ type: "error", message: "Failed to load posts" })
+      );
   }, [mounted]);
 
+  /* ---------- helpers ---------- */
   function resetForm() {
     setForm({ title: "", summary: "", content: "" });
     setEditingSlug(null);
     setSaving(false);
   }
 
+  /* ---------- submit ---------- */
   async function handleSubmit(e) {
     e.preventDefault();
+
+    // ✅ frontend validation
+    if (!form.title.trim() || !form.content.trim()) {
+      setToast({ type: "error", message: "Title and content are required" });
+      return;
+    }
+
     setSaving(true);
 
     const res = await fetch(
@@ -48,6 +61,15 @@ export default function AdminPage() {
       }
     );
 
+    setSaving(false);
+
+    // ❌ DO NOT lie to UI
+    if (!res.ok) {
+      const err = await res.json();
+      setToast({ type: "error", message: err.error || "Save failed" });
+      return;
+    }
+
     const data = await res.json();
 
     setPosts(prev =>
@@ -57,11 +79,33 @@ export default function AdminPage() {
     );
 
     setToast({ type: "success", message: "Saved successfully ✨" });
-    setTimeout(() => setToast(null), 3000);
     resetForm();
   }
 
-  // ✅ EARLY RETURN ONLY AFTER ALL HOOKS
+  /* ---------- load edit from blog ---------- */
+useEffect(() => {
+  if (!mounted) return;
+
+  const edit = localStorage.getItem("editPost");
+  if (!edit) return;
+
+  try {
+    const p = JSON.parse(edit);
+
+    setEditingSlug(p.slug);
+    setForm({
+      title: p.title || "",
+      summary: p.summary || "",
+      content: p.content || "",
+    });
+
+    localStorage.removeItem("editPost");
+  } catch {
+    localStorage.removeItem("editPost");
+  }
+}, [mounted]);
+
+  /* ---------- hydration safety ---------- */
   if (!mounted) return null;
 
   return (
@@ -79,7 +123,11 @@ export default function AdminPage() {
         posts={posts}
         onEdit={p => {
           setEditingSlug(p.slug);
-          setForm(p);
+          setForm({
+            title: p.title || "",
+            summary: p.summary || "",
+            content: p.content || "",
+          });
         }}
         onDelete={setDeleteSlug}
       />
@@ -89,7 +137,15 @@ export default function AdminPage() {
       {deleteSlug && (
         <DeleteModal
           onConfirm={async () => {
-            await fetch(`/api/posts/${deleteSlug}`, { method: "DELETE" });
+            const res = await fetch(`/api/posts/${deleteSlug}`, {
+              method: "DELETE",
+            });
+
+            if (!res.ok) {
+              setToast({ type: "error", message: "Delete failed" });
+              return;
+            }
+
             setPosts(p => p.filter(x => x.slug !== deleteSlug));
             setDeleteSlug(null);
           }}
