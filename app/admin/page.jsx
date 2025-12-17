@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PostForm from "@/components/admin/PostForm";
 import PostList from "@/components/admin/PostList";
 import Toast from "@/components/admin/Toast";
 import DeleteModal from "@/components/admin/DeleteModel";
+import { useSearchParams } from "next/navigation";
 
 export default function AdminPage() {
-  const [mounted, setMounted] = useState(false);
+  const formRef = useRef(null);
+  const searchParams = useSearchParams();
+  const editSlugFromUrl = searchParams.get("edit");
+
 
   const [posts, setPosts] = useState([]);
   const [form, setForm] = useState({ title: "", summary: "", content: "" });
@@ -16,35 +20,18 @@ export default function AdminPage() {
   const [toast, setToast] = useState(null);
   const [deleteSlug, setDeleteSlug] = useState(null);
 
-  /* ---------- mount ---------- */
   useEffect(() => {
-    setMounted(true);
+    fetch("/api/posts").then(r => r.json()).then(setPosts);
   }, []);
 
-  /* ---------- fetch posts ---------- */
-  useEffect(() => {
-    if (!mounted) return;
-
-    fetch("/api/posts")
-      .then(r => r.json())
-      .then(setPosts)
-      .catch(() =>
-        setToast({ type: "error", message: "Failed to load posts" })
-      );
-  }, [mounted]);
-
-  /* ---------- helpers ---------- */
   function resetForm() {
     setForm({ title: "", summary: "", content: "" });
     setEditingSlug(null);
     setSaving(false);
   }
 
-  /* ---------- submit ---------- */
   async function handleSubmit(e) {
     e.preventDefault();
-
-    // ✅ frontend validation
     if (!form.title.trim() || !form.content.trim()) {
       setToast({ type: "error", message: "Title and content are required" });
       return;
@@ -61,15 +48,6 @@ export default function AdminPage() {
       }
     );
 
-    setSaving(false);
-
-    // ❌ DO NOT lie to UI
-    if (!res.ok) {
-      const err = await res.json();
-      setToast({ type: "error", message: err.error || "Save failed" });
-      return;
-    }
-
     const data = await res.json();
 
     setPosts(prev =>
@@ -82,53 +60,58 @@ export default function AdminPage() {
     resetForm();
   }
 
-  /* ---------- load edit from blog ---------- */
-useEffect(() => {
-  if (!mounted) return;
+  useEffect(() => {
+    if (!editSlugFromUrl) return;
 
-  const edit = localStorage.getItem("editPost");
-  if (!edit) return;
+    async function loadPostForEdit() {
+      const res = await fetch(`/api/posts/${editSlugFromUrl}`);
+      if (!res.ok) return;
 
-  try {
-    const p = JSON.parse(edit);
+      const post = await res.json();
 
-    setEditingSlug(p.slug);
-    setForm({
-      title: p.title || "",
-      summary: p.summary || "",
-      content: p.content || "",
-    });
+      setEditingSlug(editSlugFromUrl);
+      setForm({
+        title: post.title || "",
+        summary: post.summary || "",
+        content: post.content || "",
+      });
 
-    localStorage.removeItem("editPost");
-  } catch {
-    localStorage.removeItem("editPost");
-  }
-}, [mounted]);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
 
-  /* ---------- hydration safety ---------- */
-  if (!mounted) return null;
+    loadPostForEdit();
+  }, [editSlugFromUrl]);
+
 
   return (
     <div className="max-w-5xl mx-auto space-y-16">
-      <PostForm
-        form={form}
-        setForm={setForm}
-        saving={saving}
-        editingSlug={editingSlug}
-        onSubmit={handleSubmit}
-        onReset={resetForm}
-      />
+
+      {/* 👇 wrap PostForm with ref */}
+      <div ref={formRef}>
+        <PostForm
+          form={form}
+          setForm={setForm}
+          saving={saving}
+          editingSlug={editingSlug}
+          onSubmit={handleSubmit}
+          onReset={resetForm}
+        />
+      </div>
 
       <PostList
         posts={posts}
         onEdit={p => {
+          window.history.pushState({}, "", `/admin?edit=${p.slug}`);
           setEditingSlug(p.slug);
           setForm({
             title: p.title || "",
             summary: p.summary || "",
             content: p.content || "",
           });
+
+          window.scrollTo({ top: 0, behavior: "smooth" });
         }}
+
         onDelete={setDeleteSlug}
       />
 
@@ -137,15 +120,7 @@ useEffect(() => {
       {deleteSlug && (
         <DeleteModal
           onConfirm={async () => {
-            const res = await fetch(`/api/posts/${deleteSlug}`, {
-              method: "DELETE",
-            });
-
-            if (!res.ok) {
-              setToast({ type: "error", message: "Delete failed" });
-              return;
-            }
-
+            await fetch(`/api/posts/${deleteSlug}`, { method: "DELETE" });
             setPosts(p => p.filter(x => x.slug !== deleteSlug));
             setDeleteSlug(null);
           }}

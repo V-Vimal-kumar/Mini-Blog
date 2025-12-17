@@ -5,16 +5,11 @@ import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 export default function Header() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
 
-  // ✅ Ensure client-only render
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // ⛔ Prevent hydration mismatch
-  if (!mounted) return null;
+  useEffect(() => setMounted(true), []);
+  if (!mounted || status === "loading") return null;
 
   return (
     <header className="sticky top-0 z-40 bg-black/30 backdrop-blur-xl border-b border-white/10">
@@ -27,29 +22,51 @@ export default function Header() {
             <div className="text-lg font-semibold">MiniBlog</div>
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-4 flex-wrap sm:flex-nowrap">
-  <Link
-    href="/admin"
-    className="px-4 py-2 sm:px-5 rounded-full
-               bg-gradient-to-r from-indigo-400 to-cyan-400
-               text-black text-sm font-medium shadow-lg
-               hover:scale-105 transition"
-  >
-    New Post
-  </Link>
+          <div className="flex items-center gap-3">
+            {status === "unauthenticated" && (
+              <>
+                <Link
+                  href="/login"
+                  className="px-4 py-2 rounded-full border border-white/20 text-sm hover:bg-white/10 transition"
+                >
+                  Login
+                </Link>
 
-  {session && (
-    <button
-      onClick={() => signOut({ callbackUrl: "/" })}
-      className="px-4 py-2 sm:px-5 rounded-full
-                 border border-white/20 text-sm
-                 hover:bg-white/10 transition"
-    >
-      Logout
-    </button>
-  )}
-</div>
+                <Link
+                  href="/register"
+                  className="px-4 py-2 rounded-full
+                             bg-gradient-to-r from-indigo-400 to-cyan-400
+                             text-black text-sm font-medium shadow-lg
+                             hover:scale-105 transition"
+                >
+                  Register
+                </Link>
+              </>
+            )}
 
+            {status === "authenticated" && (
+              <>
+                <Link
+                  href="/admin"
+                  className="px-4 py-2 rounded-full
+                             bg-gradient-to-r from-indigo-400 to-cyan-400
+                             text-black text-sm font-medium shadow-lg
+                             hover:scale-105 transition"
+                >
+                  New Post
+                </Link>
+
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="px-4 py-2 rounded-full
+                             border border-white/20 text-sm
+                             hover:bg-white/10 transition"
+                >
+                  Logout
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </header>

@@ -27,12 +27,11 @@ export default async function PostPage({ params }) {
 
         {/* Title */}
         <h1
-          className="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-indigo-300 via-cyan-300 to-sky-400 bg-clip-text text-transparent"
+          className="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-to-r from-indigo-300 via-cyan-300 to-sky-400 bg-clip-text text-transparent py-6 px-2"
         >
           {post.title}
         </h1>
 
-        {/* Meta (Prisma-safe) */}
         <p className="mt-4 text-sm text-slate-400">
           {post.createdAt
             ? new Date(post.createdAt).toISOString().split("T")[0]

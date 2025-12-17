@@ -11,7 +11,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className="antialiased min-h-screen flex flex-col">
         <AppShell>
-          <main className="flex-1 w-full">
+          <main className="flex-1 w-full ">
             <div
               className="min-h-full w-full bg-[radial-gradient(1200px_600px_at_10%_-10%,rgba(129,140,248,0.15),transparent),radial-gradient(800px_500px_at_90%_10%,rgba(34,211,238,0.12),transparent),linear-gradient(to_bottom,#0b1220,#020617)]"
             >
